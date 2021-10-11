@@ -13,12 +13,26 @@ final class Parser implements ParserInterface
      * @return Pattern[]
      * @throws UnableToParseException
      */
-    public function parse(string $file): array
+    public function parseFile(string $file): array
+    {
+        return $this->parseIterable($this->getFileIterable($file));
+    }
+
+    /**
+     * @param string $lines
+     * @return Pattern[]
+     * @throws UnableToParseException
+     */
+    public function parseString(string $lines): array
+    {
+        return $this->parseIterable(explode(PHP_EOL, $lines));
+    }
+
+    private function parseIterable(iterable $lines)
     {
         $patterns = [];
 
-        $handle = $this->getReadHandle($file);
-        while ($line = fgets($handle)) {
+        foreach ($lines as $line) {
             $line = trim($line);
 
             if (substr($line, 0, 1) === '#') {
@@ -36,7 +50,6 @@ final class Parser implements ParserInterface
                 $patterns[] = new Pattern($matches['file_pattern'], $owners);
             }
         }
-        fclose($handle);
 
         return $patterns;
     }
@@ -45,7 +58,7 @@ final class Parser implements ParserInterface
      * @param string $file
      * @return resource
      */
-    private function getReadHandle(string $file)
+    private function getFileIterable(string $file): iterable
     {
         if (file_exists($file) === false) {
             throw new UnableToParseException("File {$file} does not exist");
@@ -60,6 +73,9 @@ final class Parser implements ParserInterface
             throw new UnableToParseException("Unable to create a reading resource for {$file}");
         }
 
-        return $handle;
+        while ($line = fgets($handle)) {
+            yield $line;
+        }
+        fclose($handle);
     }
 }
